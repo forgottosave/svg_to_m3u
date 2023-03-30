@@ -41,22 +41,30 @@ addline() { #$1 filename
 }
 
 # File finders
+search() { #$1 songtitle
+	result=$(find "$music" -iname "$1")
+	if [[ -z "$musicfile" ]] && (( $(grep -c . <<<"$result") > 1 )); then
+		echo "found more than one entry for $1, choosing first match"
+		result="$(echo "$result" | head -1)"
+	fi
+	musicfile="$result"
+}
 notfound() { #$1 artist, $2 title
 	# try removing "remastered" ending
 	newtitle="$2"
 	[[ "$newtitle" =~ "Remaster" ]] && {
 		newtitle="$(cut -d'-' -f1 <<<"$newtitle" | xargs)"
 	}
-	echo "try $newtitle instead of $2"
-	search=$(find "$music" -iname "$1 -*- $newtitle*")
-	[[ -z "$search" ]] && NOT_FOUND_ARR+=("$file") || addline "$search"
+	search "$1 -*- $newtitle*"
+	[[ -z "$musicfile" ]] || { addline "$musicfile"; return; }
 	# try without artist
-	search=$(find "$music" -iname "*- $newtitle*")
+	search "*- $newtitle*"
+	[[ -z "$musicfile" ]] && NOT_FOUND_ARR+=("$file") || addline "$musicfile"
 }
 findfile() { #$1 artist, $2 title
 	file="$1 -*- $2.*"
-	search=$(find "$music" -iname "$file")
-	[[ -z "$search" ]] && notfound "$1" "$2" || addline "$search"
+	search "$file"
+	[[ -z "$musicfile" ]] && notfound "$1" "$2" || addline "$musicfile"
 }
 
 # Parse every line
