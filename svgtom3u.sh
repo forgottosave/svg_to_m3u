@@ -13,8 +13,12 @@ music=$1
 input=$2
 output=$3
 
+ignoreerrors=false
+
 # Check if input file exists
 [[ -f ${input} ]] || { echo "File $input doesn't exist."; exit; }
+# Check output file ending
+[[ "$output" =~ ".m3u" ]] || output="${output}.m3u"
 
 # Playlist conversion
 echo "Starting playlist conversion: ${input} -> ${output}..."
@@ -44,8 +48,16 @@ addline() { #$1 filename
 search() { #$1 songtitle
 	result=$(find "$music" -iname "$1")
 	if [[ -z "$musicfile" ]] && (( $(grep -c . <<<"$result") > 1 )); then
-		echo "found more than one entry for $1, choosing first match"
-		result="$(echo "$result" | head -1)"
+		echo "found more than one entry for $1"
+		echo "$result"
+		songtochose=1
+		# let user choose
+		[[ $ignoreerrors == false ]] && {
+			tput bel
+			read -p "   Please chose song (1-$(echo "$result" | wc -l)): " songtochose < /dev/tty
+		}
+		result="$(echo "$result" | head -$songtochose | tail -1)"
+		echo "   chose $songtochose: ${result}"
 	fi
 	musicfile="$result"
 }
@@ -81,6 +93,12 @@ done
 # Output not found songs
 echo ""
 echo "Some songs could not found in your specified music direcory:"
+for entry in "${NOT_FOUND_ARR[@]}"; do
+	echo "$entry"
+done
+
+# write songs into file
+touch ".${output:0:${#output}-4}_notfound"
 for entry in "${NOT_FOUND_ARR[@]}"; do
 	echo "$entry"
 done
